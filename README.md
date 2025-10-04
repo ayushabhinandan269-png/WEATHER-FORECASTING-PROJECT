@@ -44,7 +44,7 @@ f. Font Awesome (for icons)
 4. How to Run the Project--------------------------------------------------------
 
 a. Download or clone the repository from GitHub:
-https://github.com/ayushabhinandan269png/weather-forecast-app
+https://github.com/ayushabhinandan269-png/WEATHER-FORECASTING-PROJECT.git
 
 b. Open the project folder in VS Code or any code editor.
 
