@@ -33,12 +33,33 @@ const selectors = {
 };
 
 let isCelsius = true;
-let recentCities = []; // 🟢 store recent city names
+let recentCities = []; // store recent city names
 
 /* ----------- Message Display ----------- */
-function showMessage(text, type = "info") {
-  selectors.message.innerHTML = `<div class="message ${type}">${text}</div>`;
-  setTimeout(() => (selectors.message.innerHTML = ""), 4000);
+function showMessage(text, type = 'info') {
+  const messageBox = selectors.message;
+  messageBox.classList.remove('hidden');
+  messageBox.textContent = text;
+  messageBox.className = 'mb-4 p-3 rounded-lg transition-opacity duration-500 ease-in-out';
+
+  // Apply type-specific colors
+  if (type === 'error') {
+    messageBox.classList.add('bg-red-100', 'text-red-800');
+  } else if (type === 'warning') {
+    messageBox.classList.add('bg-yellow-100', 'text-yellow-800');
+  } else {
+    messageBox.classList.add('bg-blue-50', 'text-blue-800');
+  }
+
+  // Auto-hide after 4 seconds
+  setTimeout(() => {
+    messageBox.classList.add('opacity-0');
+    setTimeout(() => {
+      messageBox.classList.add('hidden');
+      messageBox.textContent = '';
+      messageBox.className = ''; // reset classes
+    }, 500); // wait for fade-out to finish
+  }, 4000);
 }
 
 /* ----------- Temperature Alert ----------- */
@@ -96,11 +117,12 @@ async function getWeather(city) {
     const data = await res.json();
     displayCurrentWeather(data);
     getForecast(city);
-    saveRecentCity(data.name); // 🟢 Save city to recent list
+    saveRecentCity(data.name); // Save city to recent list
   } catch (e) {
     showMessage("❌ Error: " + e.message, "error");
   }
 }
+
 
 /* ----------- Display Current Weather ----------- */
 function displayCurrentWeather(data) {
@@ -131,7 +153,16 @@ async function getForecast(city) {
       `${BASE_URL}forecast?q=${city}&appid=${API_KEY}&units=metric`
     );
     const data = await res.json();
-    const forecast = data.list.filter((x) => x.dt_txt.includes("12:00:00"));
+    const forecast = [];
+    const seenDates = new Set();
+    for (const item of data.list) {
+    const date = item.dt_txt.split(" ")[0];
+    if (!seenDates.has(date)) {
+    seenDates.add(date);
+    forecast.push(item);
+  }
+}
+
 
     selectors.forecastSection.innerHTML = "";
     forecast.forEach((f) => {
@@ -149,39 +180,87 @@ async function getForecast(city) {
       `;
       selectors.forecastSection.appendChild(card);
     });
-  } catch {
+    selectors.forecastSection.classList.remove("hidden");
+   } catch {
     showMessage("Failed to load forecast.", "error");
   }
 }
 
 /* ----------- Recent Cities Feature ----------- */
+
+if (!selectors.recentList) selectors.recentList = document.getElementById('recent-list');
+if (!selectors.recentToggle) selectors.recentToggle = document.getElementById('recent-toggle');
+if (!selectors.recentContainer) selectors.recentContainer = document.getElementById('recent-container');
+
+// local array (load once on start)
+let RecentCities = JSON.parse(localStorage.getItem('wf_recent_cities')) || [];
+
+// call this right after successful fetch (inside getWeather or after displayCurrentWeather)
+// saveRecentCity(cityName) 
 function saveRecentCity(city) {
-  
-  if (!recentCities.includes(city)) {
-    recentCities.unshift(city);
-    if (recentCities.length > 5) recentCities.pop(); // keep only 5
-    renderRecentCities();
-  }
+  if (!city) return;
+  city = city.trim();
+  // remove duplicate (case-insensitive)
+  recentCities = recentCities.filter(c => c.toLowerCase() !== city.toLowerCase());
+  recentCities.unshift(city);               // newest first
+  if (recentCities.length > 5) recentCities = recentCities.slice(0, 5);
+  localStorage.setItem('wf_recent_cities', JSON.stringify(recentCities));
 }
 
-function renderRecentCities() {
-  selectors.recentList.innerHTML = "";
-  recentCities.forEach((city) => {
-    const div = document.createElement("div");
-    div.textContent = city;
-    div.className = "px-3 py-2 hover:bg-gray-100 cursor-pointer";
-    div.addEventListener("click", () => {
-      getWeather(city);
-      selectors.recentList.classList.add("hidden"); // hide list after click
+// populate the dropdown DOM (but DO NOT show it unless toggled)
+function renderRecentList() {
+  const list = selectors.recentList;
+  if (!list) return;
+  list.innerHTML = ''; // clear existing
+
+  if (!recentCities || recentCities.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'p-2 text-gray-500 text-sm';
+    empty.textContent = 'No recent cities yet';
+    list.appendChild(empty);
+    return;
+  }
+
+  // Add each city as a clickable row
+  recentCities.forEach(city => {
+    const row = document.createElement('div');
+    row.className = 'px-3 py-2 hover:bg-gray-100 cursor-pointer border-b text-sm';
+    row.textContent = city;
+    row.addEventListener('click', () => {
+      selectors.cityInput.value = city;
+      // hide the list
+      list.classList.add('hidden');
+      if (typeof getWeather === 'function') getWeather(city);
+      else if (typeof fetchByCity === 'function') fetchByCity(city); // alternative name fallback
     });
-    selectors.recentList.appendChild(div);
+    list.appendChild(row);
   });
 }
 
-
-selectors.recentToggle.addEventListener("click", () => {
-  selectors.recentList.classList.toggle("hidden");
+// Toggle + render when Recent button clicked
+selectors.recentToggle.addEventListener('click', (e) => {
+  e.stopPropagation();           // prevent click from bubbling to document
+  renderRecentList();
+  selectors.recentList.classList.toggle('hidden');
 });
+
+// Auto-close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const list = selectors.recentList;
+  const container = selectors.recentContainer || document.getElementById('recent-container');
+  if (!list || !container) return;
+  if (!container.contains(e.target)) {
+    list.classList.add('hidden');
+  }
+});
+
+
+// Event listener for “Recent Cities ▾” button
+selectors.recentToggle.addEventListener("click", () => {
+  displayRecentCities();
+});
+
+
 
 /* ----------- Location Weather ----------- */
 selectors.locBtn.addEventListener("click", () => {
@@ -220,6 +299,13 @@ selectors.unitToggle.addEventListener("click", () => {
   selectors.unitToggle.textContent = isCelsius ? "°C" : "°F";
   showMessage(`Switched to ${isCelsius ? "Celsius" : "Fahrenheit"}.`);
 });
+
+document.addEventListener("click", (event) => {
+  if (!selectors.recentContainer?.contains(event.target)) {
+    selectors.recentList.classList.add("hidden");
+  }
+});
+
 
 /* ----------- Initial Setup ----------- */
 window.addEventListener("load", () => {

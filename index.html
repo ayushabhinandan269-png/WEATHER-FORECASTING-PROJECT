@@ -19,7 +19,7 @@
   <div class="max-w-4xl mx-auto p-4">
 
     <!-- Project Header -->
-    <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <header class="flex flex-col items-center justify-center gap-3 text-center">
       <h1 class="text-2xl font-semibold">Weather Forecast</h1>
       <div class="flex items-center gap-2 w-full sm:w-auto">
         <input id="city-input" type="text" placeholder="Search city (e.g., Mumbai)" class="flex-1 p-2 rounded border" />
@@ -44,9 +44,9 @@
         <button id="unit-toggle" class="px-3 py-2 bg-white border rounded shadow-sm hover:bg-gray-50">°C</button>
       </div>
     </section>
-
+    
     <!-- Message/Alert Area -->
-    <div id="message" class="mt-4"></div>
+    <div id="message" class="hidden mb-3 p-4 rounded-lg"></div>
 
     <!-- Main Weather Content -->
     <main class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -74,8 +74,8 @@
       </section>
 
       <!-- Forecast Section (5-Day Forecast Cards) -->
-      <section id="forecast-section" class="col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <!-- 5 day forecast cards will be inserted here by JavaScript -->
+      <section id="forecast-section" class="forecast-grid hidden col-span-2">
+       <!-- 5 day forecast cards will be inserted here by JavaScript -->
       </section>
     </main>
 
